@@ -2,6 +2,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BankBalanceCard } from '../components/BankBalanceCard';
 import { CategoryBudgetCard } from '../components/CategoryBudgetCard';
 import { EmptyState } from '../components/EmptyState';
 import { useBudgetSummary } from '../hooks/useBudgetSummary';
@@ -27,6 +28,9 @@ export function HomeScreen({ navigation }: Props) {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.month}>{capitalize(MONTH_LABEL)}</Text>
+
+        <BankBalanceCard />
+
         <View style={styles.totalsRow}>
           <View>
             <Text style={styles.totalsLabel}>Alloué</Text>
