@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { randomUUID } from 'node:crypto';
-import { getBridgeConfig, mintAccessToken } from '../../src/bridge';
+import { createUser, getBridgeConfig } from '../../src/bridge';
 import { applyCors, sendError } from '../../src/http';
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -16,12 +15,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
 
   try {
     const config = getBridgeConfig();
-    const userUuid = randomUUID();
-    // Bridge's token endpoint creates the user on first call for a new user_uuid, so this
-    // both registers the user with Bridge and validates our credentials in one round trip.
-    await mintAccessToken(config, userUuid);
+    const { uuid } = await createUser(config);
 
-    res.status(200).json({ userUuid });
+    res.status(200).json({ userUuid: uuid });
   } catch (error) {
     sendError(res, error);
   }

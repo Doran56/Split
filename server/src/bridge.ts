@@ -53,7 +53,11 @@ async function bridgeFetch(config: BridgeConfig, path: string, init: RequestInit
   const body = text ? safeJsonParse(text) : null;
 
   if (!response.ok) {
-    const message = body?.message ?? body?.error ?? `Erreur Bridge (HTTP ${response.status}).`;
+    const bridgeErrorCode = body?.errors?.[0]?.code;
+    const message =
+      body?.message ??
+      body?.error ??
+      (bridgeErrorCode ? `Erreur Bridge (HTTP ${response.status}) : ${bridgeErrorCode}` : `Erreur Bridge (HTTP ${response.status}).`);
     throw new BridgeApiError(message, response.status);
   }
 
@@ -68,15 +72,37 @@ function safeJsonParse(text: string): any {
   }
 }
 
+export interface BridgeUser {
+  uuid: string;
+}
+
+/**
+ * Creates a new Bridge user and returns the UUID Bridge assigns to it. This must happen
+ * before minting a token for that user — the token endpoint does NOT create users on the
+ * fly for an arbitrary client-supplied UUID (confirmed against the real sandbox API: an
+ * unregistered user_uuid is rejected with `user.authentication.unauthorized`).
+ */
+export async function createUser(config: BridgeConfig): Promise<BridgeUser> {
+  const body = await bridgeFetch(config, '/v3/aggregation/users', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+
+  const uuid = body?.user?.uuid ?? body?.uuid;
+  if (!uuid) {
+    throw new BridgeApiError('Réponse Bridge inattendue : uuid utilisateur manquant.', 502);
+  }
+
+  return { uuid };
+}
+
 export interface AccessToken {
   accessToken: string;
   expiresAt: string | null;
 }
 
 /**
- * Mints (and implicitly creates, if it doesn't already exist) a Bridge access token
- * scoped to the given user UUID. Bridge's token endpoint doubles as user creation on
- * first call for a given user_uuid, per available documentation snippets.
+ * Mints an access token for an EXISTING Bridge user (created via `createUser`).
  */
 export async function mintAccessToken(config: BridgeConfig, userUuid: string): Promise<AccessToken> {
   const body = await bridgeFetch(config, '/v3/aggregation/authorization/token', {

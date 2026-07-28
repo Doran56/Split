@@ -1,4 +1,36 @@
-import { aggregateBalance, type BridgeAccount } from '../bridge';
+import { BridgeApiError, aggregateBalance, createUser, type BridgeAccount } from '../bridge';
+
+const testConfig = { clientId: 'id', clientSecret: 'secret', version: '2025-01-15', apiBase: 'https://api.bridgeapi.io' };
+
+function mockFetchResponse(status: number, body: unknown) {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(body),
+  }) as unknown as typeof fetch;
+}
+
+describe('createUser', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('extracts the uuid from the nested user object Bridge actually returns', async () => {
+    mockFetchResponse(200, { user: { uuid: 'c2a26c9e-dc23-4f67-b887-bbae0f26c415', external_user_id: null } });
+    const result = await createUser(testConfig);
+    expect(result).toEqual({ uuid: 'c2a26c9e-dc23-4f67-b887-bbae0f26c415' });
+  });
+
+  it('throws a BridgeApiError when the response has no uuid anywhere', async () => {
+    mockFetchResponse(200, {});
+    await expect(createUser(testConfig)).rejects.toThrow(BridgeApiError);
+  });
+
+  it('surfaces a Bridge-side rejection with its actual error code, not just a generic HTTP status', async () => {
+    mockFetchResponse(401, { errors: [{ code: 'user.authentication.unauthorized' }] });
+    await expect(createUser(testConfig)).rejects.toThrow('user.authentication.unauthorized');
+  });
+});
 
 function account(overrides: Partial<BridgeAccount>): BridgeAccount {
   return {
