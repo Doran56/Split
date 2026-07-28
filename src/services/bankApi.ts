@@ -26,10 +26,14 @@ export function createBridgeUser(): Promise<{ userUuid: string }> {
   return request('/api/bank/create-user', { method: 'POST' });
 }
 
-export function createConnectSession(userUuid: string, callbackUrl: string): Promise<{ connectUrl: string }> {
+export function createConnectSession(
+  userUuid: string,
+  userEmail: string,
+  callbackUrl: string
+): Promise<{ connectUrl: string }> {
   return request('/api/bank/connect-session', {
     method: 'POST',
-    body: JSON.stringify({ userUuid, callbackUrl }),
+    body: JSON.stringify({ userUuid, userEmail, callbackUrl }),
   });
 }
 

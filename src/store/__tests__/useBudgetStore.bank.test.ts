@@ -27,11 +27,15 @@ describe('useBudgetStore bank actions', () => {
     mockedBankApi.createBridgeUser.mockResolvedValue({ userUuid: 'new-uuid' });
     mockedBankApi.createConnectSession.mockResolvedValue({ connectUrl: 'https://connect.example/session' });
 
-    const result = await useBudgetStore.getState().connectBankAccount('split://bank-callback');
+    const result = await useBudgetStore.getState().connectBankAccount('user@example.com', 'split://bank-callback');
 
     expect(mockedBankApi.createBridgeUser).toHaveBeenCalledTimes(1);
     expect(mockedSecureStorage.setBankUserUuid).toHaveBeenCalledWith('new-uuid');
-    expect(mockedBankApi.createConnectSession).toHaveBeenCalledWith('new-uuid', 'split://bank-callback');
+    expect(mockedBankApi.createConnectSession).toHaveBeenCalledWith(
+      'new-uuid',
+      'user@example.com',
+      'split://bank-callback'
+    );
     expect(result).toEqual({ connectUrl: 'https://connect.example/session' });
   });
 
@@ -39,19 +43,23 @@ describe('useBudgetStore bank actions', () => {
     mockedSecureStorage.getBankUserUuid.mockResolvedValue('existing-uuid');
     mockedBankApi.createConnectSession.mockResolvedValue({ connectUrl: 'https://connect.example/session' });
 
-    await useBudgetStore.getState().connectBankAccount('split://bank-callback');
+    await useBudgetStore.getState().connectBankAccount('user@example.com', 'split://bank-callback');
 
     expect(mockedBankApi.createBridgeUser).not.toHaveBeenCalled();
-    expect(mockedBankApi.createConnectSession).toHaveBeenCalledWith('existing-uuid', 'split://bank-callback');
+    expect(mockedBankApi.createConnectSession).toHaveBeenCalledWith(
+      'existing-uuid',
+      'user@example.com',
+      'split://bank-callback'
+    );
   });
 
   it('connectBankAccount sets an error status and rethrows when the backend call fails', async () => {
     mockedSecureStorage.getBankUserUuid.mockResolvedValue('existing-uuid');
     mockedBankApi.createConnectSession.mockRejectedValue(new Error('Backend indisponible.'));
 
-    await expect(useBudgetStore.getState().connectBankAccount('split://bank-callback')).rejects.toThrow(
-      'Backend indisponible.'
-    );
+    await expect(
+      useBudgetStore.getState().connectBankAccount('user@example.com', 'split://bank-callback')
+    ).rejects.toThrow('Backend indisponible.');
     expect(useBudgetStore.getState().bankConnection.status).toBe('error');
     expect(useBudgetStore.getState().bankConnection.errorMessage).toBe('Backend indisponible.');
   });

@@ -40,3 +40,5 @@ export const expenseAmountSchema = localeAmount('Montant invalide.').refine((val
 export const expenseCategorySchema = z.number({ message: 'Sélectionnez une catégorie.' });
 
 export const expenseDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date invalide.');
+
+export const bankEmailSchema = z.string().email('Adresse e-mail invalide.');

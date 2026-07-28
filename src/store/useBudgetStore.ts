@@ -35,7 +35,7 @@ interface BudgetState {
   completeOnboarding: (db: SQLiteDatabase) => Promise<void>;
   addExpense: (db: SQLiteDatabase, input: NewExpenseInput) => Promise<void>;
   refreshMonthExpenses: (db: SQLiteDatabase) => Promise<void>;
-  connectBankAccount: (callbackUrl: string) => Promise<{ connectUrl: string }>;
+  connectBankAccount: (userEmail: string, callbackUrl: string) => Promise<{ connectUrl: string }>;
   refreshBankBalance: () => Promise<void>;
   disconnectBankAccount: () => Promise<void>;
 }
@@ -119,7 +119,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     set({ monthExpenses });
   },
 
-  connectBankAccount: async (callbackUrl) => {
+  connectBankAccount: async (userEmail, callbackUrl) => {
     set({ bankConnection: { ...get().bankConnection, status: 'connecting', errorMessage: null } });
     try {
       let userUuid = await secureStorage.getBankUserUuid();
@@ -128,7 +128,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         userUuid = created.userUuid;
         await secureStorage.setBankUserUuid(userUuid);
       }
-      return await bankApi.createConnectSession(userUuid, callbackUrl);
+      return await bankApi.createConnectSession(userUuid, userEmail, callbackUrl);
     } catch (error) {
       set({
         bankConnection: {

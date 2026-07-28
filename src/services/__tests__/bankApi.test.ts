@@ -32,13 +32,17 @@ describe('bankApi', () => {
     );
   });
 
-  it('createConnectSession sends userUuid and callbackUrl and returns connectUrl', async () => {
+  it('createConnectSession sends userUuid, userEmail and callbackUrl and returns connectUrl', async () => {
     mockFetchOnce(200, { connectUrl: 'https://connect.bridgeapi.io/session/xyz' });
-    const result = await createConnectSession('abc-123', 'split://bank-callback');
+    const result = await createConnectSession('abc-123', 'user@example.com', 'split://bank-callback');
     expect(result).toEqual({ connectUrl: 'https://connect.bridgeapi.io/session/xyz' });
     const call = (globalThis.fetch as jest.Mock).mock.calls[0];
     expect(call[0]).toBe('https://split-server.example.com/api/bank/connect-session');
-    expect(JSON.parse(call[1].body)).toEqual({ userUuid: 'abc-123', callbackUrl: 'split://bank-callback' });
+    expect(JSON.parse(call[1].body)).toEqual({
+      userUuid: 'abc-123',
+      userEmail: 'user@example.com',
+      callbackUrl: 'split://bank-callback',
+    });
   });
 
   it('fetchBankBalance builds the query string and returns the parsed balance', async () => {

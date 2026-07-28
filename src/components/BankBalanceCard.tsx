@@ -1,8 +1,9 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { formatCurrencyEUR } from '../services/locale';
+import { bankEmailSchema } from '../services/validation';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { colors } from '../theme/colors';
 
@@ -19,12 +20,20 @@ export function BankBalanceCard() {
   const refreshBankBalance = useBudgetStore((state) => state.refreshBankBalance);
   const disconnectBankAccount = useBudgetStore((state) => state.disconnectBankAccount);
   const [isOpeningBank, setIsOpeningBank] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const handleConnect = async () => {
+    const result = bankEmailSchema.safeParse(email);
+    if (!result.success) {
+      setEmailError(result.error.issues[0]?.message ?? 'Adresse e-mail invalide.');
+      return;
+    }
+    setEmailError(null);
     setIsOpeningBank(true);
     try {
       const callbackUrl = Linking.createURL('bank-callback');
-      const { connectUrl } = await connectBankAccount(callbackUrl);
+      const { connectUrl } = await connectBankAccount(result.data, callbackUrl);
       await WebBrowser.openAuthSessionAsync(connectUrl, callbackUrl);
       await refreshBankBalance();
     } catch {
@@ -38,7 +47,23 @@ export function BankBalanceCard() {
     return (
       <View style={styles.card}>
         <Text style={styles.title}>Compte bancaire</Text>
-        <Text style={styles.description}>Connectez votre banque pour afficher votre solde réel ici.</Text>
+        <Text style={styles.description}>
+          Connectez votre banque pour afficher votre solde réel ici. Bridge (notre partenaire
+          d'agrégation bancaire) a besoin de votre e-mail pour vous prévenir en cas de changement
+          important de ses conditions.
+        </Text>
+        <TextInput
+          style={[styles.emailInput, emailError ? styles.emailInputError : null]}
+          value={email}
+          onChangeText={setEmail}
+          placeholder="vous@exemple.com"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          inputMode="email"
+        />
+        {emailError ? <Text style={styles.emailError}>{emailError}</Text> : null}
         <Pressable style={styles.connectButton} onPress={handleConnect} disabled={isOpeningBank}>
           {isOpeningBank ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -106,6 +131,27 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 4,
     marginBottom: 12,
+    lineHeight: 18,
+  },
+  emailInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: colors.text,
+    backgroundColor: colors.background,
+    marginBottom: 10,
+  },
+  emailInputError: {
+    borderColor: colors.danger,
+  },
+  emailError: {
+    fontSize: 12,
+    color: colors.danger,
+    marginTop: -6,
+    marginBottom: 10,
   },
   refreshLabel: {
     fontSize: 13,

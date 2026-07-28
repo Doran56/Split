@@ -121,12 +121,13 @@ export async function mintAccessToken(config: BridgeConfig, userUuid: string): P
 export async function createConnectSession(
   config: BridgeConfig,
   accessToken: string,
+  userEmail: string,
   callbackUrl: string
 ): Promise<{ connectUrl: string }> {
   const body = await bridgeFetch(config, '/v3/aggregation/connect-sessions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ callback_url: callbackUrl }),
+    body: JSON.stringify({ user_email: userEmail, callback_url: callbackUrl }),
   });
 
   const connectUrl = body?.url ?? body?.redirect_url ?? body?.connect_url;
