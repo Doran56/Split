@@ -1,12 +1,16 @@
+import * as bankAccountAssignmentsRepo from '../../services/bankAccountAssignmentsRepo';
 import * as bankApi from '../../services/bankApi';
 import * as secureStorage from '../../services/secureStorage';
 import { useBudgetStore } from '../useBudgetStore';
 
 jest.mock('../../services/bankApi');
 jest.mock('../../services/secureStorage');
+jest.mock('../../services/bankAccountAssignmentsRepo');
 
 const mockedBankApi = bankApi as jest.Mocked<typeof bankApi>;
 const mockedSecureStorage = secureStorage as jest.Mocked<typeof secureStorage>;
+const mockedAssignmentsRepo = bankAccountAssignmentsRepo as jest.Mocked<typeof bankAccountAssignmentsRepo>;
+const fakeDb = {} as never;
 
 const INITIAL_BANK_CONNECTION = {
   status: 'none' as const,
@@ -14,6 +18,7 @@ const INITIAL_BANK_CONNECTION = {
   currency: null,
   updatedAt: null,
   errorMessage: null,
+  accounts: [],
 };
 
 beforeEach(() => {
@@ -90,6 +95,7 @@ describe('useBudgetStore bank actions', () => {
       currency: 'EUR',
       updatedAt: '2026-07-27T10:00:00Z',
       errorMessage: null,
+      accounts: [],
     });
   });
 
@@ -101,6 +107,7 @@ describe('useBudgetStore bank actions', () => {
         currency: 'EUR',
         updatedAt: '2026-07-20T10:00:00Z',
         errorMessage: null,
+        accounts: [],
       },
     });
     mockedSecureStorage.getBankUserUuid.mockResolvedValue('existing-uuid');
@@ -116,7 +123,14 @@ describe('useBudgetStore bank actions', () => {
 
   it('disconnectBankAccount clears the stored userUuid and resets bank connection state', async () => {
     useBudgetStore.setState({
-      bankConnection: { status: 'connected', balance: 500, currency: 'EUR', updatedAt: 'x', errorMessage: null },
+      bankConnection: {
+        status: 'connected',
+        balance: 500,
+        currency: 'EUR',
+        updatedAt: 'x',
+        errorMessage: null,
+        accounts: [],
+      },
     });
 
     await useBudgetStore.getState().disconnectBankAccount();
@@ -137,12 +151,38 @@ describe('useBudgetStore bank actions', () => {
 
   it('disconnectBankAccount resets state even when clearing storage fails', async () => {
     useBudgetStore.setState({
-      bankConnection: { status: 'connected', balance: 500, currency: 'EUR', updatedAt: 'x', errorMessage: null },
+      bankConnection: {
+        status: 'connected',
+        balance: 500,
+        currency: 'EUR',
+        updatedAt: 'x',
+        errorMessage: null,
+        accounts: [],
+      },
     });
     mockedSecureStorage.clearBankUserUuid.mockRejectedValue(new Error('SecureStore indisponible.'));
 
     await expect(useBudgetStore.getState().disconnectBankAccount()).resolves.toBeUndefined();
 
     expect(useBudgetStore.getState().bankConnection).toEqual(INITIAL_BANK_CONNECTION);
+  });
+
+  it('assignBankAccount persists the assignment and refreshes bankAccountAssignments from the repo', async () => {
+    mockedAssignmentsRepo.getAssignments.mockResolvedValue({ 'acc-1': 2 });
+
+    await useBudgetStore.getState().assignBankAccount(fakeDb, 'acc-1', 2);
+
+    expect(mockedAssignmentsRepo.setAssignment).toHaveBeenCalledWith(fakeDb, 'acc-1', 2);
+    expect(useBudgetStore.getState().bankAccountAssignments).toEqual({ 'acc-1': 2 });
+  });
+
+  it('assignBankAccount can unassign an account by passing null', async () => {
+    useBudgetStore.setState({ bankAccountAssignments: { 'acc-1': 2 } });
+    mockedAssignmentsRepo.getAssignments.mockResolvedValue({});
+
+    await useBudgetStore.getState().assignBankAccount(fakeDb, 'acc-1', null);
+
+    expect(mockedAssignmentsRepo.setAssignment).toHaveBeenCalledWith(fakeDb, 'acc-1', null);
+    expect(useBudgetStore.getState().bankAccountAssignments).toEqual({});
   });
 });

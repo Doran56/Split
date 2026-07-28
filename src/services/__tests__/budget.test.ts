@@ -3,6 +3,7 @@ import {
   computeAllocations,
   computeBurnRate,
   computeDailyPace,
+  computeRealBalanceByCategory,
   computeSpentByCategory,
 } from '../budget';
 import type { Category, Expense } from '../../types/budget';
@@ -91,5 +92,56 @@ describe('buildBudgetSummary', () => {
     const investment = summary.find((s) => s.categoryId === 3)!;
     expect(investment.spent).toBe(0);
     expect(investment.remaining).toBe(400);
+    expect(essential.isRealBalance).toBe(false);
+  });
+
+  it('uses a real bank balance for spent/remaining on an assigned category, ignoring its manual expenses', () => {
+    const expenses: Expense[] = [
+      // These manual entries should be entirely ignored for category 2 since it has a real balance.
+      { id: 1, categoryId: 2, amount: 9999, date: '2026-07-01', note: null, createdAt: '' },
+    ];
+    const now = new Date(2026, 6, 15);
+    const summary = buildBudgetSummary(2000, categories, expenses, now, { 2: 450 });
+
+    const loisirs = summary.find((s) => s.categoryId === 2)!;
+    expect(loisirs.isRealBalance).toBe(true);
+    expect(loisirs.allocated).toBe(600);
+    expect(loisirs.remaining).toBe(450);
+    expect(loisirs.spent).toBe(150); // allocated - realBalance, not the 9999 manual entry
+    expect(loisirs.burnRate).toBeCloseTo(0.25);
+
+    // Categories without a real balance are unaffected.
+    const essential = summary.find((s) => s.categoryId === 1)!;
+    expect(essential.isRealBalance).toBe(false);
+    expect(essential.spent).toBe(0);
+  });
+
+  it('floors derived spend at 0 when the real balance exceeds the allocation (rollover), never showing negative spend', () => {
+    const now = new Date(2026, 6, 15);
+    const summary = buildBudgetSummary(2000, categories, [], now, { 3: 900 }); // allocated 400, balance 900
+
+    const investment = summary.find((s) => s.categoryId === 3)!;
+    expect(investment.remaining).toBe(900);
+    expect(investment.spent).toBe(0);
+    expect(investment.burnRate).toBe(0);
+  });
+});
+
+describe('computeRealBalanceByCategory', () => {
+  it('sums balances of accounts assigned to the same category', () => {
+    const result = computeRealBalanceByCategory(
+      [
+        { id: 'acc-1', balance: 500 },
+        { id: 'acc-2', balance: 300 },
+        { id: 'acc-3', balance: 100 },
+      ],
+      { 'acc-1': 2, 'acc-2': 2, 'acc-3': 3 }
+    );
+    expect(result).toEqual({ 2: 800, 3: 100 });
+  });
+
+  it('ignores accounts with no assignment', () => {
+    const result = computeRealBalanceByCategory([{ id: 'acc-1', balance: 500 }], {});
+    expect(result).toEqual({});
   });
 });

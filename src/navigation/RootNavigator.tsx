@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { AddExpenseScreen } from '../screens/AddExpenseScreen';
+import { AssignBankAccountsScreen } from '../screens/AssignBankAccountsScreen';
 import { CategoryConfigScreen } from '../screens/CategoryConfigScreen';
 import { OnboardingHabitsScreen } from '../screens/OnboardingHabitsScreen';
 import { OnboardingIncomeScreen } from '../screens/OnboardingIncomeScreen';
@@ -43,6 +44,11 @@ export function RootNavigator() {
               name="AddExpense"
               component={AddExpenseScreen}
               options={{ presentation: 'modal', headerShown: true, title: 'Nouvelle dépense' }}
+            />
+            <Stack.Screen
+              name="AssignBankAccounts"
+              component={AssignBankAccountsScreen}
+              options={{ headerShown: true, title: 'Mes comptes bancaires' }}
             />
           </>
         )}

@@ -40,6 +40,15 @@ const MIGRATIONS: Migration[] = [
       CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id);
     `,
   },
+  {
+    version: 2,
+    sql: `
+      CREATE TABLE IF NOT EXISTS bank_account_assignments (
+        bridge_account_id TEXT PRIMARY KEY,
+        category_id INTEGER NOT NULL REFERENCES categories(id)
+      );
+    `,
+  },
 ];
 
 const DEFAULT_CATEGORIES = [

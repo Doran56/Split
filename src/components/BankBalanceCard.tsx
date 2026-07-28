@@ -1,3 +1,5 @@
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
@@ -6,6 +8,7 @@ import { formatCurrencyEUR } from '../services/locale';
 import { bankEmailSchema } from '../services/validation';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { colors } from '../theme/colors';
+import type { RootStackParamList } from '../types/navigation';
 
 const updatedAtFormatter = new Intl.DateTimeFormat('fr-FR', {
   day: 'numeric',
@@ -15,6 +18,7 @@ const updatedAtFormatter = new Intl.DateTimeFormat('fr-FR', {
 });
 
 export function BankBalanceCard() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const bankConnection = useBudgetStore((state) => state.bankConnection);
   const connectBankAccount = useBudgetStore((state) => state.connectBankAccount);
   const refreshBankBalance = useBudgetStore((state) => state.refreshBankBalance);
@@ -102,9 +106,14 @@ export function BankBalanceCard() {
         <Text style={styles.error}>{bankConnection.errorMessage}</Text>
       ) : null}
 
-      <Pressable onPress={() => disconnectBankAccount()}>
-        <Text style={styles.disconnect}>Déconnecter</Text>
-      </Pressable>
+      <View style={styles.linksRow}>
+        <Pressable onPress={() => navigation.navigate('AssignBankAccounts')}>
+          <Text style={styles.manageLink}>Gérer mes comptes</Text>
+        </Pressable>
+        <Pressable onPress={() => disconnectBankAccount()}>
+          <Text style={styles.disconnect}>Déconnecter</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -174,10 +183,19 @@ const styles = StyleSheet.create({
     color: colors.danger,
     marginTop: 8,
   },
+  linksRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  manageLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.primary,
+  },
   disconnect: {
     fontSize: 12,
     color: colors.textMuted,
-    marginTop: 12,
   },
   connectButton: {
     backgroundColor: colors.primary,
