@@ -69,6 +69,31 @@ describe('aggregateBalance', () => {
     expect(result.accounts.find((a) => a.currency === 'USD')?.balance).toBe(500);
   });
 
+  it('prefers EUR as the headline currency even when a non-EUR account is listed first (real Bridge sandbox data)', () => {
+    // Reproduces the exact shape returned by Bridge's Demo Bank: a GBP account listed
+    // before several EUR ones. Naively using "the first account's currency" would headline
+    // 625.16 GBP and silently drop 1600+ EUR from the displayed total — wrong for a
+    // euro-budgeting app regardless of the order the bank API happens to return accounts in.
+    const result = aggregateBalance([
+      account({ id: 1, name: 'Pocket GBP', balance: 625.16, currencyCode: 'GBP' }),
+      account({ id: 2, name: 'Compte Courant 3', balance: 800, currencyCode: 'EUR' }),
+      account({ id: 3, name: 'Compte Courant 2', balance: 850, currencyCode: 'EUR' }),
+    ]);
+    expect(result.currency).toBe('EUR');
+    expect(result.balance).toBe(1650);
+    expect(result.accounts).toHaveLength(3);
+    expect(result.accounts.find((a) => a.currency === 'GBP')?.balance).toBe(625.16);
+  });
+
+  it('falls back to the first account currency when there is no EUR account at all', () => {
+    const result = aggregateBalance([
+      account({ id: 1, balance: 200, currencyCode: 'USD' }),
+      account({ id: 2, balance: 300, currencyCode: 'USD' }),
+    ]);
+    expect(result.currency).toBe('USD');
+    expect(result.balance).toBe(500);
+  });
+
   it('avoids floating point drift when summing many small balances', () => {
     const result = aggregateBalance([
       account({ id: 1, balance: 0.1 }),

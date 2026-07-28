@@ -171,16 +171,19 @@ export interface AggregatedBalance {
 }
 
 /**
- * Sums balances for accounts sharing the dominant currency (the first account's currency).
- * Accounts in a different currency are still listed individually but excluded from the
- * summed total, since summing mixed currencies would be meaningless.
+ * Sums balances for accounts sharing one "headline" currency. EUR is preferred whenever at
+ * least one account holds EUR — this app budgets in euros, so that's the number the user
+ * actually wants to compare against their budget, regardless of which currency the bank API
+ * happens to list first. Falls back to the first account's currency only if there's no EUR
+ * account at all. Accounts in a different currency are still listed individually but
+ * excluded from the summed total, since summing mixed currencies would be meaningless.
  */
 export function aggregateBalance(accounts: BridgeAccount[]): AggregatedBalance {
   if (accounts.length === 0) {
     return { balance: 0, currency: 'EUR', updatedAt: null, accounts: [] };
   }
 
-  const currency = accounts[0].currencyCode;
+  const currency = accounts.some((a) => a.currencyCode === 'EUR') ? 'EUR' : accounts[0].currencyCode;
   const sameCurrency = accounts.filter((a) => a.currencyCode === currency);
   const balance = round2(sameCurrency.reduce((sum, a) => sum + a.balance, 0));
   const updatedAt = accounts
