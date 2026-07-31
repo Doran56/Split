@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { create } from 'zustand';
+import * as bankAccountAssignmentsRepo from '../services/bankAccountAssignmentsRepo';
 import * as bankApi from '../services/bankApi';
 import * as categoriesRepo from '../services/categoriesRepo';
 import * as expensesRepo from '../services/expensesRepo';
@@ -14,6 +15,7 @@ const INITIAL_BANK_CONNECTION: BankConnectionState = {
   currency: null,
   updatedAt: null,
   errorMessage: null,
+  accounts: [],
 };
 
 interface BudgetState {
@@ -24,6 +26,7 @@ interface BudgetState {
   categories: Category[];
   monthExpenses: Expense[];
   bankConnection: BankConnectionState;
+  bankAccountAssignments: Record<string, number>;
 
   hydrate: (db: SQLiteDatabase) => Promise<void>;
   setIncome: (db: SQLiteDatabase, income: number) => Promise<void>;
@@ -35,9 +38,10 @@ interface BudgetState {
   completeOnboarding: (db: SQLiteDatabase) => Promise<void>;
   addExpense: (db: SQLiteDatabase, input: NewExpenseInput) => Promise<void>;
   refreshMonthExpenses: (db: SQLiteDatabase) => Promise<void>;
-  connectBankAccount: (callbackUrl: string) => Promise<{ connectUrl: string }>;
+  connectBankAccount: (userEmail: string, callbackUrl: string) => Promise<{ connectUrl: string }>;
   refreshBankBalance: () => Promise<void>;
   disconnectBankAccount: () => Promise<void>;
+  assignBankAccount: (db: SQLiteDatabase, bridgeAccountId: string, categoryId: number | null) => Promise<void>;
 }
 
 function applySettings(settings: Settings) {
@@ -64,14 +68,16 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   categories: [],
   monthExpenses: [],
   bankConnection: INITIAL_BANK_CONNECTION,
+  bankAccountAssignments: {},
 
   hydrate: async (db) => {
-    const [settings, categories, monthExpenses] = await Promise.all([
+    const [settings, categories, monthExpenses, bankAccountAssignments] = await Promise.all([
       settingsRepo.getSettings(db),
       categoriesRepo.getCategories(db),
       fetchCurrentMonthExpenses(db),
+      bankAccountAssignmentsRepo.getAssignments(db),
     ]);
-    set({ ...applySettings(settings), categories, monthExpenses, isHydrated: true });
+    set({ ...applySettings(settings), categories, monthExpenses, bankAccountAssignments, isHydrated: true });
 
     // Ne bloque pas le rendu de l'app sur le stockage sécurisé / un appel réseau au backend bancaire.
     try {
@@ -119,7 +125,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     set({ monthExpenses });
   },
 
-  connectBankAccount: async (callbackUrl) => {
+  connectBankAccount: async (userEmail, callbackUrl) => {
     set({ bankConnection: { ...get().bankConnection, status: 'connecting', errorMessage: null } });
     try {
       let userUuid = await secureStorage.getBankUserUuid();
@@ -128,7 +134,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         userUuid = created.userUuid;
         await secureStorage.setBankUserUuid(userUuid);
       }
-      return await bankApi.createConnectSession(userUuid, callbackUrl);
+      return await bankApi.createConnectSession(userUuid, userEmail, callbackUrl);
     } catch (error) {
       set({
         bankConnection: {
@@ -158,6 +164,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
           currency: result.currency,
           updatedAt: result.updatedAt,
           errorMessage: null,
+          accounts: result.accounts,
         },
       });
     } catch (error) {
@@ -178,6 +185,12 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       // Best-effort : on réinitialise l'état local même si l'effacement du stockage échoue.
     }
     set({ bankConnection: INITIAL_BANK_CONNECTION });
+  },
+
+  assignBankAccount: async (db, bridgeAccountId, categoryId) => {
+    await bankAccountAssignmentsRepo.setAssignment(db, bridgeAccountId, categoryId);
+    const bankAccountAssignments = await bankAccountAssignmentsRepo.getAssignments(db);
+    set({ bankAccountAssignments });
   },
 }));
 

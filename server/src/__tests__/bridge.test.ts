@@ -1,4 +1,36 @@
-import { aggregateBalance, type BridgeAccount } from '../bridge';
+import { BridgeApiError, aggregateBalance, createUser, type BridgeAccount } from '../bridge';
+
+const testConfig = { clientId: 'id', clientSecret: 'secret', version: '2025-01-15', apiBase: 'https://api.bridgeapi.io' };
+
+function mockFetchResponse(status: number, body: unknown) {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(body),
+  }) as unknown as typeof fetch;
+}
+
+describe('createUser', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('extracts the uuid from the nested user object Bridge actually returns', async () => {
+    mockFetchResponse(200, { user: { uuid: 'c2a26c9e-dc23-4f67-b887-bbae0f26c415', external_user_id: null } });
+    const result = await createUser(testConfig);
+    expect(result).toEqual({ uuid: 'c2a26c9e-dc23-4f67-b887-bbae0f26c415' });
+  });
+
+  it('throws a BridgeApiError when the response has no uuid anywhere', async () => {
+    mockFetchResponse(200, {});
+    await expect(createUser(testConfig)).rejects.toThrow(BridgeApiError);
+  });
+
+  it('surfaces a Bridge-side rejection with its actual error code, not just a generic HTTP status', async () => {
+    mockFetchResponse(401, { errors: [{ code: 'user.authentication.unauthorized' }] });
+    await expect(createUser(testConfig)).rejects.toThrow('user.authentication.unauthorized');
+  });
+});
 
 function account(overrides: Partial<BridgeAccount>): BridgeAccount {
   return {
@@ -35,6 +67,31 @@ describe('aggregateBalance', () => {
     expect(result.currency).toBe('EUR');
     expect(result.accounts).toHaveLength(2);
     expect(result.accounts.find((a) => a.currency === 'USD')?.balance).toBe(500);
+  });
+
+  it('prefers EUR as the headline currency even when a non-EUR account is listed first (real Bridge sandbox data)', () => {
+    // Reproduces the exact shape returned by Bridge's Demo Bank: a GBP account listed
+    // before several EUR ones. Naively using "the first account's currency" would headline
+    // 625.16 GBP and silently drop 1600+ EUR from the displayed total — wrong for a
+    // euro-budgeting app regardless of the order the bank API happens to return accounts in.
+    const result = aggregateBalance([
+      account({ id: 1, name: 'Pocket GBP', balance: 625.16, currencyCode: 'GBP' }),
+      account({ id: 2, name: 'Compte Courant 3', balance: 800, currencyCode: 'EUR' }),
+      account({ id: 3, name: 'Compte Courant 2', balance: 850, currencyCode: 'EUR' }),
+    ]);
+    expect(result.currency).toBe('EUR');
+    expect(result.balance).toBe(1650);
+    expect(result.accounts).toHaveLength(3);
+    expect(result.accounts.find((a) => a.currency === 'GBP')?.balance).toBe(625.16);
+  });
+
+  it('falls back to the first account currency when there is no EUR account at all', () => {
+    const result = aggregateBalance([
+      account({ id: 1, balance: 200, currencyCode: 'USD' }),
+      account({ id: 2, balance: 300, currencyCode: 'USD' }),
+    ]);
+    expect(result.currency).toBe('USD');
+    expect(result.balance).toBe(500);
   });
 
   it('avoids floating point drift when summing many small balances', () => {

@@ -10,6 +10,11 @@ export function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+/** Rounds to the nearest multiple of `step` (e.g. roundToNearest(487, 10) === 490). */
+export function roundToNearest(value: number, step: number): number {
+  return Math.round(value / step) * step;
+}
+
 /**
  * Parses a French-locale decimal string (comma or dot separator) into a number.
  * Returns null when the input isn't a valid single number (e.g. multiple separators, letters).

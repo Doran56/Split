@@ -13,9 +13,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const { userUuid, callbackUrl } = req.body ?? {};
+  const { userUuid, userEmail, callbackUrl } = req.body ?? {};
   if (typeof userUuid !== 'string' || !userUuid) {
     res.status(400).json({ error: 'invalid_request', message: 'userUuid manquant.' });
+    return;
+  }
+  if (typeof userEmail !== 'string' || !userEmail) {
+    res.status(400).json({ error: 'invalid_request', message: 'userEmail manquant.' });
     return;
   }
   if (typeof callbackUrl !== 'string' || !callbackUrl) {
@@ -26,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   try {
     const config = getBridgeConfig();
     const { accessToken } = await mintAccessToken(config, userUuid);
-    const { connectUrl } = await createConnectSession(config, accessToken, callbackUrl);
+    const { connectUrl } = await createConnectSession(config, accessToken, userEmail, callbackUrl);
 
     res.status(200).json({ connectUrl });
   } catch (error) {

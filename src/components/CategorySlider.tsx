@@ -7,9 +7,10 @@ interface CategorySliderProps {
   color: string;
   value: number;
   onValueChange: (value: number) => void;
+  amountLabel?: string;
 }
 
-export function CategorySlider({ label, color, value, onValueChange }: CategorySliderProps) {
+export function CategorySlider({ label, color, value, onValueChange, amountLabel }: CategorySliderProps) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -17,7 +18,10 @@ export function CategorySlider({ label, color, value, onValueChange }: CategoryS
           <View style={[styles.swatch, { backgroundColor: color }]} />
           <Text style={styles.label}>{label}</Text>
         </View>
-        <Text style={styles.value}>{Math.round(value)}%</Text>
+        <View style={styles.valueColumn}>
+          <Text style={styles.value}>{Math.round(value)}%</Text>
+          {amountLabel ? <Text style={styles.amount}>{amountLabel}</Text> : null}
+        </View>
       </View>
       <Slider
         minimumValue={0}
@@ -58,9 +62,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
+  valueColumn: {
+    alignItems: 'flex-end',
+  },
   value: {
     fontSize: 15,
     fontWeight: '700',
     color: colors.text,
+  },
+  amount: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 1,
   },
 });

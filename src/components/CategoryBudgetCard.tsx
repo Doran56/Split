@@ -17,6 +17,11 @@ export function CategoryBudgetCard({ item }: CategoryBudgetCardProps) {
         <View style={styles.labelRow}>
           <View style={[styles.swatch, { backgroundColor: item.color }]} />
           <Text style={styles.label}>{item.label}</Text>
+          {item.isRealBalance ? (
+            <View style={styles.realBalancePill}>
+              <Text style={styles.realBalancePillLabel}>Solde réel</Text>
+            </View>
+          ) : null}
         </View>
         <Text style={styles.allocated}>{formatCurrencyEUR(item.allocated)}</Text>
       </View>
@@ -24,7 +29,10 @@ export function CategoryBudgetCard({ item }: CategoryBudgetCardProps) {
       <ProgressBar ratio={item.burnRate} />
 
       <View style={styles.footer}>
-        <Text style={styles.spent}>{formatCurrencyEUR(item.spent)} dépensés</Text>
+        <Text style={styles.spent}>
+          {item.isRealBalance ? '≈ ' : ''}
+          {formatCurrencyEUR(item.spent)} {item.isRealBalance ? 'consommés' : 'dépensés'}
+        </Text>
         <Text style={[styles.remaining, isOverBudget && styles.over]}>
           {isOverBudget
             ? `${formatCurrencyEUR(Math.abs(item.remaining))} de dépassement`
@@ -66,6 +74,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
+    marginRight: 8,
+  },
+  realBalancePill: {
+    backgroundColor: colors.background,
+    borderRadius: 999,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+  },
+  realBalancePillLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   allocated: {
     fontSize: 15,

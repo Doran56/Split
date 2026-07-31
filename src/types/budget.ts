@@ -58,6 +58,8 @@ export interface BudgetSummaryItem extends Allocation {
   remaining: number;
   burnRate: number;
   pace: DailyPace;
+  /** True when spent/remaining come from a real bank balance rather than manually logged expenses. */
+  isRealBalance: boolean;
 }
 
 export interface Recommendation {

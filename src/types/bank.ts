@@ -20,4 +20,5 @@ export interface BankConnectionState {
   currency: string | null;
   updatedAt: string | null;
   errorMessage: string | null;
+  accounts: BankAccountSummary[];
 }

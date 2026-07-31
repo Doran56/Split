@@ -10,6 +10,7 @@ export type RootStackParamList = {
   CategoryConfig: { fromSettings?: boolean } | undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   AddExpense: undefined;
+  AssignBankAccounts: undefined;
 };
 
 declare global {
