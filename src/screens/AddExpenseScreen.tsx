@@ -3,6 +3,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AmountInput } from '../components/AmountInput';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -62,49 +63,55 @@ export function AddExpenseScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Nouvelle dépense</Text>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Nouvelle dépense</Text>
 
-        <AmountInput label="Montant" value={amount} onChangeText={setAmount} placeholder="Ex : 25,50" error={errors.amount} />
+          <AmountInput label="Montant" value={amount} onChangeText={setAmount} placeholder="Ex : 25,50" error={errors.amount} />
 
-        <Text style={styles.label}>Date</Text>
-        <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
-          <Text style={styles.dateButtonText}>{dateLabelFormatter.format(date)}</Text>
-        </Pressable>
-        {showDatePicker ? (
-          <DateTimePicker
-            value={date}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            maximumDate={new Date()}
-            onChange={(_event, selectedDate) => {
-              setShowDatePicker(Platform.OS === 'ios');
-              if (selectedDate) setDate(selectedDate);
-            }}
+          <Text style={styles.label}>Date</Text>
+          <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+            <Text style={styles.dateButtonText}>{dateLabelFormatter.format(date)}</Text>
+          </Pressable>
+          {showDatePicker ? (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'inline' : 'default'}
+              maximumDate={new Date()}
+              onChange={(_event, selectedDate) => {
+                setShowDatePicker(Platform.OS === 'ios');
+                if (selectedDate) setDate(selectedDate);
+              }}
+            />
+          ) : null}
+
+          <Text style={styles.label}>Catégorie</Text>
+          <CategoryPicker categories={categories} selectedId={categoryId} onSelect={setCategoryId} />
+          {errors.category ? <Text style={styles.errorText}>{errors.category}</Text> : null}
+
+          <Text style={styles.label}>Note (optionnel)</Text>
+          <TextInput
+            style={styles.noteInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder="Ex : Courses de la semaine"
+            placeholderTextColor={colors.textMuted}
           />
-        ) : null}
+        </View>
 
-        <Text style={styles.label}>Catégorie</Text>
-        <CategoryPicker categories={categories} selectedId={categoryId} onSelect={setCategoryId} />
-        {errors.category ? <Text style={styles.errorText}>{errors.category}</Text> : null}
-
-        <Text style={styles.label}>Note (optionnel)</Text>
-        <TextInput
-          style={styles.noteInput}
-          value={note}
-          onChangeText={setNote}
-          placeholder="Ex : Courses de la semaine"
-          placeholderTextColor={colors.textMuted}
-        />
-      </View>
-
-      <PrimaryButton title={isSaving ? 'Enregistrement...' : 'Ajouter'} onPress={handleSubmit} disabled={isSaving} />
-    </KeyboardAvoidingView>
+        <PrimaryButton title={isSaving ? 'Enregistrement...' : 'Ajouter'} onPress={handleSubmit} disabled={isSaving} />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

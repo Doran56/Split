@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AmountInput } from '../components/AmountInput';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { habitsSchema } from '../services/validation';
@@ -53,36 +54,42 @@ export function OnboardingHabitsScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Vos habitudes</Text>
-        <Text style={styles.subtitle}>
-          Pour vous suggérer une répartition qui augmente votre taux d'investissement, dites-nous en moyenne
-          combien vous dépensez chaque mois.
-        </Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Vos habitudes</Text>
+          <Text style={styles.subtitle}>
+            Pour vous suggérer une répartition qui augmente votre taux d'investissement, dites-nous en moyenne
+            combien vous dépensez chaque mois.
+          </Text>
 
-        <AmountInput
-          label="Dépenses essentielles / charges fixes"
-          value={essential}
-          onChangeText={setEssential}
-          placeholder="Ex : 1000"
-          error={errors.essential}
-        />
-        <AmountInput
-          label="Dépenses loisirs"
-          value={leisure}
-          onChangeText={setLeisure}
-          placeholder="Ex : 400"
-          error={errors.leisure}
-        />
-      </View>
+          <AmountInput
+            label="Dépenses essentielles / charges fixes"
+            value={essential}
+            onChangeText={setEssential}
+            placeholder="Ex : 1000"
+            error={errors.essential}
+          />
+          <AmountInput
+            label="Dépenses loisirs"
+            value={leisure}
+            onChangeText={setLeisure}
+            placeholder="Ex : 400"
+            error={errors.leisure}
+          />
+        </View>
 
-      <PrimaryButton title={isSaving ? 'Enregistrement...' : 'Continuer'} onPress={handleContinue} disabled={isSaving} />
-    </KeyboardAvoidingView>
+        <PrimaryButton title={isSaving ? 'Enregistrement...' : 'Continuer'} onPress={handleContinue} disabled={isSaving} />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -2,6 +2,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AmountInput } from '../components/AmountInput';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { incomeSchema } from '../services/validation';
@@ -37,31 +38,37 @@ export function OnboardingIncomeScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>Bienvenue !</Text>
-        <Text style={styles.subtitle}>
-          Pour vous proposer une répartition de budget adaptée, commençons par votre revenu mensuel brut.
-        </Text>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.content}>
+          <Text style={styles.title}>Bienvenue !</Text>
+          <Text style={styles.subtitle}>
+            Pour vous proposer une répartition de budget adaptée, commençons par votre revenu mensuel brut.
+          </Text>
 
-        <AmountInput
-          label="Revenu mensuel brut"
-          value={value}
-          onChangeText={setValue}
-          placeholder="Ex : 2500"
-          error={error}
-        />
-      </View>
+          <AmountInput
+            label="Revenu mensuel brut"
+            value={value}
+            onChangeText={setValue}
+            placeholder="Ex : 2500"
+            error={error}
+          />
+        </View>
 
-      <PrimaryButton title={isSaving ? 'Enregistrement...' : 'Continuer'} onPress={handleContinue} disabled={isSaving} />
-    </KeyboardAvoidingView>
+        <PrimaryButton title={isSaving ? 'Enregistrement...' : 'Continuer'} onPress={handleContinue} disabled={isSaving} />
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

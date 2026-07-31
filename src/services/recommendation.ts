@@ -7,11 +7,10 @@ export interface HabitInput {
   currentLeisureSpend: number;
 }
 
-const CLASSIC = { essential: 50, leisure: 30, investment: 20 };
-/** On ne recommande jamais un taux d'investissement inférieur à la règle classique. */
-const MIN_INVESTMENT = CLASSIC.investment;
-/** Marge de sécurité ajoutée au-dessus du ratio essentiel observé, pour rester réaliste. */
-const ESSENTIAL_BUFFER = 5;
+const FALLBACK = { essential: 50, leisure: 30, investment: 20 };
+/** Bande cible pour les loisirs : jamais plus de 30%, jamais moins de 20% si le budget le permet. */
+const MIN_LEISURE = 20;
+const MAX_LEISURE = 30;
 
 /**
  * Corrige la dérive d'arrondi flottant en ajoutant le résidu à la plus grande valeur,
@@ -31,30 +30,36 @@ function fixRoundingDrift(parts: Recommendation): Recommendation {
   return { ...parts, [largestKey]: round1(parts[largestKey] + residual) };
 }
 
+/**
+ * Les dépenses essentielles sont fixes : la recommandation reflète le ratio réel observé,
+ * sans marge ni plafond artificiel — ce sont de vraies charges, pas un objectif ajustable.
+ * Les loisirs sont bornés entre 20% et 30% du revenu, sauf si le budget restant après
+ * l'essentiel ne le permet pas ("si possible"), auquel cas ils absorbent ce qu'il reste.
+ * L'investissement reçoit systématiquement le reliquat (100 - essentiel - loisirs).
+ */
 export function recommendAllocation({ income, currentEssentialSpend, currentLeisureSpend }: HabitInput): Recommendation {
   if (income <= 0) {
-    return { ...CLASSIC, message: '' };
+    return { ...FALLBACK, message: '' };
   }
 
-  const essentialRatio = clamp((currentEssentialSpend / income) * 100, 0, 100);
-  const leisureRatio = clamp((currentLeisureSpend / income) * 100, 0, 100 - essentialRatio);
-  const currentInvestRatio = round1(100 - essentialRatio - leisureRatio);
+  const essential = round1(clamp((currentEssentialSpend / income) * 100, 0, 100));
+  const room = round1(clamp(100 - essential, 0, 100));
 
-  const hasRoom = essentialRatio <= CLASSIC.essential;
-  const targetEssential = round1(hasRoom ? Math.min(essentialRatio + ESSENTIAL_BUFFER, CLASSIC.essential) : essentialRatio);
+  // Le ratio brut (non borné par la place disponible) sert à déterminer l'objectif dans la
+  // bande 20-30% ; la disponibilité réelle (room) n'intervient qu'ensuite, pour le message.
+  const rawLeisureRatio = clamp((currentLeisureSpend / income) * 100, 0, 100);
+  const leisureTarget = clamp(rawLeisureRatio, MIN_LEISURE, MAX_LEISURE);
+  const leisure = round1(clamp(leisureTarget, 0, room));
+  const investment = round1(Math.max(room - leisure, 0));
 
-  const desiredInvestment = Math.max(MIN_INVESTMENT, currentInvestRatio);
-  const roomForLeisureAndInvestment = clamp(round1(100 - targetEssential), 0, 100);
-  const investment = round1(Math.min(desiredInvestment, roomForLeisureAndInvestment));
-  const leisure = round1(Math.max(roomForLeisureAndInvestment - investment, 0));
+  const result = fixRoundingDrift({ essential, leisure, investment, message: '' });
 
-  const result = fixRoundingDrift({ essential: targetEssential, leisure, investment, message: '' });
-
-  const message = hasRoom
-    ? `Vos dépenses essentielles sont sous ${CLASSIC.essential}% de votre revenu : nous vous proposons d'investir ${result.investment}% pour accélérer votre épargne.`
-    : investment >= desiredInvestment
-      ? `Vos charges essentielles sont élevées : nous vous suggérons de limiter les loisirs à ${result.leisure}% pour maintenir ${result.investment}% d'investissement.`
-      : `Vos charges essentielles sont très élevées : même en réduisant les loisirs, nous ne pouvons vous proposer que ${result.investment}% d'investissement pour l'instant.`;
+  const message =
+    result.leisure < MIN_LEISURE
+      ? `Vos dépenses essentielles représentent ${result.essential}% de votre revenu : il ne reste que ${result.leisure}% pour les loisirs, sous le plancher de ${MIN_LEISURE}% habituel. Investissement : ${result.investment}%.`
+      : result.leisure < leisureTarget
+        ? `Vos dépenses essentielles représentent ${result.essential}% de votre revenu : nous limitons les loisirs à ${result.leisure}% pour maximiser l'investissement à ${result.investment}%.`
+        : `Vos dépenses essentielles représentent ${result.essential}% de votre revenu : nous vous proposons ${result.leisure}% pour les loisirs (entre ${MIN_LEISURE} et ${MAX_LEISURE}%) et ${result.investment}% pour l'investissement.`;
 
   return { ...result, message };
 }

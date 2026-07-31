@@ -2,6 +2,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { BankBalanceCard } from '../components/BankBalanceCard';
 import { CategoryBudgetCard } from '../components/CategoryBudgetCard';
 import { EmptyState } from '../components/EmptyState';
@@ -25,11 +26,18 @@ export function HomeScreen({ navigation }: Props) {
   const hasBudgetConfigured = totalAllocated > 0;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.month}>{capitalize(MONTH_LABEL)}</Text>
 
         <BankBalanceCard />
+
+        <Pressable
+          onPress={() => navigation.navigate('CategoryConfig', { fromSettings: true })}
+          style={styles.editAllocationLink}
+        >
+          <Text style={styles.editAllocationLabel}>Modifier ma répartition</Text>
+        </Pressable>
 
         <View style={styles.totalsRow}>
           <View>
@@ -55,7 +63,7 @@ export function HomeScreen({ navigation }: Props) {
       <Pressable style={styles.fab} onPress={() => navigation.navigate('AddExpense')}>
         <Text style={styles.fabLabel}>+</Text>
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -76,6 +84,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.textMuted,
     marginBottom: 4,
+  },
+  editAllocationLink: {
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+  },
+  editAllocationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
   totalsRow: {
     flexDirection: 'row',

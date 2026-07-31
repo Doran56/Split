@@ -39,7 +39,7 @@ export function RootNavigator() {
         ) : (
           <>
             <Stack.Screen name="MainTabs" component={MainTabNavigator} />
-            <Stack.Screen name="CategoryConfig" component={CategoryConfigScreen} options={{ headerShown: true, title: 'Répartition' }} />
+            <Stack.Screen name="CategoryConfig" component={CategoryConfigScreen} />
             <Stack.Screen
               name="AddExpense"
               component={AddExpenseScreen}

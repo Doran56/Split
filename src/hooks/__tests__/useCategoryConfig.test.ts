@@ -54,6 +54,47 @@ describe('useCategoryConfig', () => {
     expect(total(result.current.drafts)).toBe(100);
   });
 
+  it('after 2 distinct sliders have been touched, the 3rd absorbs the remainder while the other touched one stays fixed', async () => {
+    const { result } = await renderHook(() => useCategoryConfig(categories));
+
+    // First touch (category 1): still proportional, since only 1 slider has been touched so far.
+    await act(() => result.current.updatePercentage(1, 60));
+    expect(result.current.drafts).toEqual({ 1: 60, 2: 24, 3: 16 });
+
+    // Second touch (category 2): now locked — category 1 must stay exactly at 60 (not
+    // rebalanced again), category 3 (untouched) absorbs whatever remains.
+    await act(() => result.current.updatePercentage(2, 40));
+    expect(result.current.drafts).toEqual({ 1: 60, 2: 40, 3: 0 });
+  });
+
+  it('touching the previously-untouched remainder promotes it, bumping the least-recently-touched slider to remainder', async () => {
+    const { result } = await renderHook(() => useCategoryConfig(categories));
+
+    await act(() => result.current.updatePercentage(1, 60)); // touched: [1]
+    await act(() => result.current.updatePercentage(2, 40)); // touched: [1, 2] -> 3 is remainder (0)
+    expect(result.current.drafts).toEqual({ 1: 60, 2: 40, 3: 0 });
+
+    // Touching 3 (the remainder) promotes it; 1 is the least-recently-touched of {1, 2},
+    // so 1 becomes the new remainder while 2 stays fixed at 40.
+    await act(() => result.current.updatePercentage(3, 30));
+    expect(result.current.drafts).toEqual({ 3: 30, 2: 40, 1: 30 });
+  });
+
+  it('applyPreset overwrites all drafts and resets the touched-order tracking', async () => {
+    const { result } = await renderHook(() => useCategoryConfig(categories));
+
+    await act(() => result.current.updatePercentage(1, 60));
+    await act(() => result.current.updatePercentage(2, 40)); // now locked: 1 fixed at 60, 3 remainder
+
+    await act(() => result.current.applyPreset({ essentielles: 45, loisirs: 25, investissement: 30 }));
+    expect(result.current.drafts).toEqual({ 1: 45, 2: 25, 3: 30 });
+
+    // Touched-order should be reset: the very next move falls back to proportional again,
+    // not the locked mode left over from before applyPreset.
+    await act(() => result.current.updatePercentage(1, 55));
+    expect(result.current.drafts[2]).not.toBe(25); // proportional redistribution moved it
+  });
+
   it('produces CategoryPctUpdate entries matching the current drafts', async () => {
     const { result } = await renderHook(() => useCategoryConfig(categories));
     await act(() => result.current.updatePercentage(1, 60));

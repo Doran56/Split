@@ -1,6 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSQLiteContext } from 'expo-sqlite';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { CategoryPicker } from '../components/CategoryPicker';
 import { EmptyState } from '../components/EmptyState';
 import { formatCurrencyEUR } from '../services/locale';
@@ -19,42 +20,46 @@ export function AssignBankAccountsScreen(_props: Props) {
 
   if (accounts.length === 0) {
     return (
-      <EmptyState
-        title="Aucun compte connecté"
-        description="Connectez d'abord votre banque depuis l'écran d'accueil pour pouvoir attribuer vos comptes à une catégorie."
-      />
+      <SafeAreaView style={styles.container} edges={['bottom']}>
+        <EmptyState
+          title="Aucun compte connecté"
+          description="Connectez d'abord votre banque depuis l'écran d'accueil pour pouvoir attribuer vos comptes à une catégorie."
+        />
+      </SafeAreaView>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.intro}>
-        Attribuez chaque compte à une catégorie pour que son solde réel remplace le suivi manuel
-        des dépenses de cette catégorie. Touchez à nouveau la catégorie sélectionnée pour
-        retirer l'attribution.
-      </Text>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.intro}>
+          Attribuez chaque compte à une catégorie pour que son solde réel remplace le suivi manuel
+          des dépenses de cette catégorie. Touchez à nouveau la catégorie sélectionnée pour
+          retirer l'attribution.
+        </Text>
 
-      {accounts.map((account) => {
-        const assignedCategoryId = bankAccountAssignments[account.id] ?? null;
-        return (
-          <View key={account.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.accountName}>{account.name}</Text>
-              <Text style={styles.accountBalance}>
-                {account.currency === 'EUR' ? formatCurrencyEUR(account.balance) : `${account.balance} ${account.currency}`}
-              </Text>
+        {accounts.map((account) => {
+          const assignedCategoryId = bankAccountAssignments[account.id] ?? null;
+          return (
+            <View key={account.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.accountName}>{account.name}</Text>
+                <Text style={styles.accountBalance}>
+                  {account.currency === 'EUR' ? formatCurrencyEUR(account.balance) : `${account.balance} ${account.currency}`}
+                </Text>
+              </View>
+              <CategoryPicker
+                categories={categories}
+                selectedId={assignedCategoryId}
+                onSelect={(categoryId) =>
+                  assignBankAccount(db, account.id, categoryId === assignedCategoryId ? null : categoryId)
+                }
+              />
             </View>
-            <CategoryPicker
-              categories={categories}
-              selectedId={assignedCategoryId}
-              onSelect={(categoryId) =>
-                assignBankAccount(db, account.id, categoryId === assignedCategoryId ? null : categoryId)
-              }
-            />
-          </View>
-        );
-      })}
-    </ScrollView>
+          );
+        })}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
